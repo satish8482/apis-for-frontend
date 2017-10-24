@@ -1,0 +1,12 @@
+{
+  "name": "herokuapp",
+  "version": "1.0.0",
+  "description": "sampleherokuapp",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --timeout 15000",
+    "start":"node server.js"
+  },
+  "author": "Satish matapati",
+  "license": "ISC"
+}
