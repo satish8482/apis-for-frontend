@@ -1,26 +1,29 @@
-
-const pg = require('pg');
+var Hapi = require('hapi');
+const server = new Hapi.Server();
+var pg = require('pg');
 var Sequelize=require ('sequelize');
-var app  = require('express')();// Express App include
-var http = require('http').Server(app); // http server
-var env = app.get('env') == 'development' ? 'dev' : app.get('env');
-pg.defaults.ssl = process.env.DATABASE_URL != undefined;
-var port = process.env.PORT || 8086;
-var bodyParser = require("body-parser"); // Body parser for fetch posted data
+var hapiparser = require("hapi-bodyparser"); // Body parser for fetch posted data
 
-app.use(bodyParser.urlencoded({ extended: false })); 
-app.use(bodyParser.json()); // Body parser use JSON data
-var express = require('express');
-var router = express.Router();
+//hapiparser.use(hapiparser.urlencoded({ extended: false })); 
+//hapiparser.use(hapiparser.json()); // Body parser use JSON data
 
-var sequelize = new Sequelize('d34eq7hbv7sgol', 'sqhjzsiqgxutpn', '0ae8dd772f6a2be1e836e8dd9257cd7735a6b38a152e6abd83faf61457c250ea', {
-    host: 'ec2-107-22-235-167.compute-1.amazonaws.com',
+//var bodyParser = require("body-parser"); // Body parser for fetch posted data
+
+//server.use(bodyParser.urlencoded({ extended: false })); 
+//server.use(bodyParser.json()); // Body parser use JSON data
+server.connection( {
+    port: 8086
+});
+
+var sequelize = new Sequelize('da7hp8e4ufl1i', 'gxyuhqciwnazgl', '8418dd1a6ca5ad452c4d67a1135fac0f1800bb9df87e9c27b07456db82e20cf3', {
+    host: 'ec2-184-72-223-199.compute-1.amazonaws.com',
     port: 5432,
     dialect: 'postgres',
+    schema:'public',
     dialectOptions:{
-      ssl:true
-    },
-    DATABASE_URL:'postgres://sqhjzsiqgxutpn:0ae8dd772f6a2be1e836e8dd9257cd7735a6b38a152e6abd83faf61457c250ea@ec2-107-22-235-167.compute-1.amazonaws.com:5432/d34eq7hbv7sgol?ssl=true'
+    ssl:true
+},
+    DATABASE_URL:'postgres://gxyuhqciwnazgl:8418dd1a6ca5ad452c4d67a1135fac0f1800bb9df87e9c27b07456db82e20cf3@ec2-184-72-223-199.compute-1.amazonaws.com:5432/da7hp8e4ufl1i'
 });
 sequelize
   .authenticate()
@@ -30,8 +33,9 @@ sequelize
   .catch(err => {
     console.error('Unable to connect to the database:', err);
   });
-  var Birds= sequelize.define('bird_table', {
-  id: {
+
+/*var Birds= sequelize.define('birds', {
+  idd: {
     type: Sequelize.STRING,
     primaryKey: true
     },
@@ -60,9 +64,7 @@ sequelize
     
      });
 
-  
   //Applying Birds table to database
-
   sequelize
   .sync({ force: true })
   .then(function(err) {
@@ -70,141 +72,231 @@ sequelize
   }, function (err) { 
     console.log('An error occurred while creating the table:', err);
   });
+  
 
 sequelize.sync({ force: true }).then(function () {
    Birds.create({
-  id:'1',
-  name:'Peacock',
-  family:'Family',
+  idd:'1',
+  name:'Dove',
+  family:'DoveFamily',
   continents:'india',
   added:'2017-10-04',
-  visible:'true'
+  visible:'true',
+  createdAt:'2017-10-04',
+  updatedAt:'2017-10-09'
   }).then(function(){
   console.log('Data successfully inserted');
   })
 });
+*/
+ server.register([{
+    register: require('hapi-bodyparser'),
+    options: {
+        // parser: { allowDots: true, strictNullHandling: true }, 
+        // sanitizer: { 
+        //     trim: true, 
+        //     stripNullorEmpty: true  
+        // }, 
+        // merge: false,  
+        // body: false  
+    }
+}], function (err) {
+    // Insert your preferred error handling here... 
+});
 
- 
-  var express = require('express'),
-bodyParser = require('body-parser');
-  app.get('/Getbird',function(req,res){
-    var data = {
-        "Data":""
+
+
+
+
+
+
+server.route({
+
+    method: 'GET',
+    path: '/hello',
+    handler: ( req, res ) => {
+        res( 'Hello World!' );
+    }
+
+});
+server.route({
+
+    method: 'GET',
+    path: '/Getbird',
+    config: {
+    plugins: {
+      body: { merge: false, sanitizer: { stripNullorEmpty: false } }
+    },
+    cors: {
+        origin: ['*'],
+        additionalHeaders: ['cache-control', 'x-requested-with'],
+        credentials: true
+    },
+    handler: ( request, reply) => {
+         var data = {
+        
     };
-     sequelize.query("SELECT * FROM bird_tables where visible=:visible", { replacements: { visible: 'true' },type: sequelize.QueryTypes.SELECT})
-  .then(function(Birds,err,rows,fields) {
+     sequelize.query("SELECT * FROM birds_test", { replacements: { visible: 'true' },type: sequelize.QueryTypes.SELECT})
+ .then(function(Birds,err,rows,fields) {
+     //sequelize.query("SELECT * FROM birds_test")
+  //.then(function(Birds,err,rows,fields) {
     // We don't need spread here, since only the results will be returned for select queries
     //if(rows.length!=0){
     if(Birds){
-    
-            data["Data"] = Birds;
-            // data["Data"] = rows;
-            res.json(data);
-
-            //res.json({"err" : false, "message" : "success",data});
-        }
-        else{
-          res.status(404).json(data);
-        }
-        
-
-
-        
+    console.log("Called Birds GET Method !!");
+    data["Data"] = Birds;
+    reply(data);
+     
+    }   
   });
+}
+}
 });
 
-app.post('/Postbird',function(req,res){
-    var id = req.body.id;
-    var name = req.body.name;
-    var family= req.body.family;
-    var continents = req.body.continents;
-     var added= req.body.added;
-      var visible= req.body.visible;
+server.route({
+   
+    method:'POST',
+    path:'/Postbird',
+    config: {
+    plugins: {
+      body: { merge: false, sanitizer: { stripNullorEmpty: false } }
+    },
+    cors: {
+        origin: ['*'],
+        additionalHeaders: ['cache-control', 'x-requested-with'],
+        credentials: true
+
+    },
+     handler: ( request, reply ) => {
+
+    console.log(request.payload);
+
+    console.log("Called Birds POST Method !!");
+    var idd = request.payload.idd;
+    var name = request.payload.name;
+    var family= request.payload.family;
+    var continents = request.payload.continents;
+    var added= request.payload.added;
+    var visible= request.payload.visible;
      
-      console.log(req.body);
-    
-    console.log(id);
+
+
     var data = {
         "Data":""
     };
-   if(!!id&& !!name && !!family && !!continents && !!added && !!visible) {
-sequelize.query("INSERT INTO bird_tables (id,name,family,continents,added,visible) VALUES('" + id+ "','" + name+ "','" + family + "','" + continents+ "','" + added+ "','" + visible+ "')",[id,name,family,continents,added,visible],{type: sequelize.QueryTypes.INSERT}).then(function(Birds,err) {
+  //  if( !!name && !!family && !!continents ) {
+   if(!!idd&& !!name && !!family && !!continents && !!added && !!visible) {
+sequelize.query("INSERT INTO birds_test (idd,name,family,continents,added,visible) VALUES('" + idd+ "','" + name+ "','" + family + "','" + continents+ "','" + added+ "','" + visible+ "')",[idd,name,family,continents,added,visible],{type: sequelize.QueryTypes.INSERT}).then(function(Birds,err) {
+    //sequelize.query("INSERT INTO birds (name,family,continents) VALUES('" + name+ "','" + family + "','" + continents+ "')",[name,family,continents],{type: sequelize.QueryTypes.INSERT}).then(function(Birds,err) {
+
     
  if(!!err){
-                data["Data"] = "Error Adding data";
+                data.Data = "Error Adding data";
             }else{
                 //data["Data"] = 0;
                 data["Data"] = "Bird Added Successfully";
             }
-            res.json(data);
+            reply(data);
         });
     }else{
         data["Data"] = "Please provide all required data of bird";
         //res.json(404).data);
-res.status(400).json(data);
+ reply(data);
     }
+    }
+}
 });
 
+server.route({
+    method:'PUT',
+    path:'/Putbird',
+    config: {
+    plugins: {
+      body: { merge: false, sanitizer: { stripNullorEmpty: false } }
+    },
+    cors: {
+        origin: ['*'],
+        additionalHeaders: ['cache-control', 'x-requested-with'],
+        credentials: true
 
-app.put('/Putbird', function(req,res){
+    },
+     handler: ( request, reply ) => {
+        console.log("Called Birds PUT Method !!");
+        var idd = request.payload.idd;
+        var name= request.payload.name;
+        var data = {
+            "Data":""
+    };
   
-     var id = req.body.id;
-     var name= req.body.name;
-      var data = {
-  
-        "Data":""
-      };
-  
-      if(!!id&& !!name ) {
-  sequelize.query("UPDATE bird_tables set name= '"+name+"' where id= '"+id+"' ",[id,name],{type: sequelize.QueryTypes.UPDATE}).then(function(Birds,err) {
+      if(!!idd&& !!name ) {
+  sequelize.query("UPDATE birds_test set name= '"+name+"' where idd= '"+idd+"' ",[idd,name],{type: sequelize.QueryTypes.UPDATE}).then(function(Birds,err) {
       
    if(!!err){
                   data["Data"] = "Error Adding data";
               }else{
                   data["Data"] = "Bird Updated Successfully";
               }
-              res.json(data);
+              reply(data);
           });
       }else{
           data["Data"] = "Please provide all required data of bird";
-          res.status(404).json(data);
+          reply.status(404).json(data);
       
   }
+
+}
+}
   });
 
-app.delete('/Deletebird', function(req,res){
-  
-     var id = req.body.id;
-     
-      var data = {
-  
+server.route({
+    method:'DELETE',
+    path:'/Deletebird',
+    config: {
+    plugins: {
+      body: { merge: false, sanitizer: { stripNullorEmpty: false } }
+    },
+    cors: {
+        origin: ['*'],
+        additionalHeaders: ['cache-control', 'x-requested-with'],
+        credentials: true
+    },
+    handler: ( request, reply ) => {  
+    console.log("Called Birds DELETE Method !!");
+    var idd = request.payload.idd;
+    var data = {
         "Data":""
-      };
+    };
   
-      if(!!id) {
-  sequelize.query("DELETE from  bird_tables where id= '"+id+"' ",[id],{type: sequelize.QueryTypes.DELETE}).then(function(Birds,err) {
+    if(!!idd) {
+        sequelize.query("DELETE from  birds_test where idd= '"+idd+"' ",[idd],{type: sequelize.QueryTypes.DELETE}).then(function(Birds,err) {
       
-   if(!!err){
+            if(!!err){
                   data["Data"] = "Error Adding data";
-              }else{
+            }else{
                   data["Data"] = "Bird Deleted Successfully";
-              }
-              res.json(data);
+            }
+              reply(data);
           });
-      }else{
+    }else{
           data["Data"] = "Please provide all required data of bird";
-          res.status(404).json(data);
-    
-      
-  }
-  });
+          reply.status(404).json(data);
+    }
+    }
+}
+});
 
 
 
+server.start(err => {
 
+    if (err) {
 
+        // Fancy error handling here
+        console.error( 'Error was handled!' );
+        console.error( err );
 
+    }
 
-  // app.use('/api', router);
-   app.listen(port);
-console.log('Magic happens on port ' + port);
+    console.log( `Server started at ${ server.info.uri }` );
+
+});
